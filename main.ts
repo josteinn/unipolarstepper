@@ -13,6 +13,8 @@ namespace stepper {
         private input3: DigitalPin;
         private input4: DigitalPin;
         private delay: number;
+        private stop: boolean;
+        private isRunning: boolean;
 
         setPins(in1: DigitalPin, in2: DigitalPin, in3: DigitalPin, in4: DigitalPin): void {
             this.input1 = in1;
@@ -24,10 +26,13 @@ namespace stepper {
         //% blockId=runAntiClockwise block="run %motor|%steps|steps anti-clockwise"
         //% weight=85 blockGap=8
         //% steps.defl=100
-        runAntiClockWise(steps: number) {
+        runAntiClockwise(steps: number) {
+            if (this.isRunning) { return }
+            this.isRunning = true;
+            this.stop = false;
             let j = 0;
             for (let i = 0; i < steps; i++) {
-
+                if (this.stop) { break }
                 pins.digitalWritePin(this.input1, stpWave[j]);
                 pins.digitalWritePin(this.input2, stpWave[++j]);
                 pins.digitalWritePin(this.input3, stpWave[++j]);
@@ -36,23 +41,34 @@ namespace stepper {
                 if (j > 15) { j = 0 }
                 basic.pause(this.delay);
             }
+
+            this.resetPins();
+            //this.stop = false;
+            this.isRunning = false;
         }
 
         //% blockId=runClockwise block="run %motor|%steps|steps clockwise"
         //% weight=85 blockGap=8
         //% steps.defl=100
-        runClockWise(steps: number) {
-            let j = 15;
+        runClockwise(steps: number) {
+            if (this.isRunning) { return }
+            this.isRunning = true;
+            this.stop = false;
+            let j = 0;
             for (let i = 0; i < steps; i++) {
-
-                pins.digitalWritePin(this.input1, stpWave[j]);
-                pins.digitalWritePin(this.input2, stpWave[--j]);
-                pins.digitalWritePin(this.input3, stpWave[--j]);
-                pins.digitalWritePin(this.input4, stpWave[--j]);
-                --j;
-                if (j < 0) { j = 15 }
+                if (this.stop) { break }
+                pins.digitalWritePin(this.input4, stpWave[j]);
+                pins.digitalWritePin(this.input3, stpWave[++j]);
+                pins.digitalWritePin(this.input2, stpWave[++j]);
+                pins.digitalWritePin(this.input1, stpWave[++j]);
+                ++j;
+                if (j > 15) { j = 0 }
                 basic.pause(this.delay);
             }
+
+            this.resetPins();
+            //this.stop = false;
+            this.isRunning = false;
         }
 
         //% blockId=set_motor_calibration block="%motor|set delay between steps to %delayNum|ms"
@@ -65,6 +81,12 @@ namespace stepper {
         //% blockId=stopMotor block="stop %motor"
         //% weight=70 blockGap=8
         stopMotor(): void {
+            if (this.stop) { return }
+            this.stop = true;
+            this.resetPins();            
+        }
+
+        resetPins(): void {            
             pins.digitalWritePin(this.input1, 0);
             pins.digitalWritePin(this.input2, 0);
             pins.digitalWritePin(this.input3, 0);
